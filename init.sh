@@ -114,7 +114,7 @@ else
 fi
 
 # 公共操作
-sh -c "$(curl -fsSL https://raw.github.com/ohmyzsh/ohmyzsh/master/tools/install.sh)"
+sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)"
 echo "安装 oh-my-zsh 完成"
 
 # zsh 插件
