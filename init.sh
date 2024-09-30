@@ -8,6 +8,16 @@ if [ "$(uname)" = "Linux" ]; then
     sudo apt update
     echo "apt 更新完成"
 
+    # 中文环境
+    sudo apt install language-pack-zh-hans
+    sudo update-locale LANG=en_US.UTF-8 LC_ALL=zh_CN.UTF-8
+    echo "中文环境安装完成"
+
+    # 换源
+    curl -L https://gitee.com/RubyMetric/chsrc/releases/download/pre/chsrc-x64-linux -o chsrc; chmod +x ./chsrc
+    sudo ./chsrc set ubuntu
+    echo "换源完成"
+
     # 安装 curl
     sudo apt install -y curl
     echo "安装 curl 完成"
@@ -34,6 +44,8 @@ if [ "$(uname)" = "Linux" ]; then
 
     # 安装 node
     sudo apt install -y npm
+    sudo ./chsrc set npm
+    sudo npm install -g n live-server pm2 nodemon
     echo "安装 node 完成"
 
     # 安装 zsh
@@ -44,21 +56,20 @@ if [ "$(uname)" = "Linux" ]; then
     curl -sS https://starship.rs/install.sh | sh
     echo "安装 starship 完成"
 
-    # 安装 docker
-    # Add Docker's official GPG key:
-    sudo apt-get install ca-certificates curl gnupg
-    sudo install -m 0755 -d /etc/apt/keyrings
-    curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
-    sudo chmod a+r /etc/apt/keyrings/docker.gpg
+    # # 安装 docker
+    # # Add Docker's official GPG key:
+    # sudo apt-get install ca-certificates curl gnupg
+    # sudo install -m 0755 -d /etc/apt/keyrings
+    # curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+    # sudo chmod a+r /etc/apt/keyrings/docker.gpg
 
-    # Add the repository to Apt sources:
-    echo \
-    "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu \
-    $(. /etc/os-release && echo "$VERSION_CODENAME") stable" | \
-    sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
-    sudo apt-get update
-
-    sudo apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+    # # Add the repository to Apt sources:
+    # echo \
+    # "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu \
+    # $(. /etc/os-release && echo "$VERSION_CODENAME") stable" | \
+    # sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+    # sudo apt-get update
+    # sudo apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
 elif [ "$(uname)" = "Darwin" ]; then
     echo "macOS"
 
