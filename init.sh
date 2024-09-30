@@ -5,8 +5,8 @@
 if [ "$(uname)" = "Linux" ]; then
     echo "Linux"
       # apt 更新
-    sudo apt update
-    echo "apt 更新完成"
+    # sudo apt update
+    # echo "apt 更新完成"
 
     # 中文环境
     sudo apt install language-pack-zh-hans
