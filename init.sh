@@ -4,23 +4,29 @@
 # Check the operating system type
 if [ "$(uname)" = "Linux" ]; then
     echo "Linux"
-      # apt 更新
+    # apt 更新
     #  apt update
     # echo "apt 更新完成"
 
-    # 中文环境
-     apt install language-pack-zh-hans
-     update-locale LANG=en_US.UTF-8 LC_ALL=zh_CN.UTF-8
-    echo "中文环境安装完成"
+
 
     # 换源
-    curl -L https://gitee.com/RubyMetric/chsrc/releases/download/pre/chsrc-x64-linux -o chsrc; chmod +x ./chsrc
-     ./chsrc set ubuntu
+    curl -L https://gitee.com/RubyMetric/chsrc/releases/download/pre/chsrc-x64-linux -o chsrc; chmod +x ./chsrc &&  ./chsrc set ubuntu
     echo "换源完成"
 
-    # 安装 curl
-     apt install -y curl
-    echo "安装 curl 完成"
+    # 中文环境
+    apt install language-pack-zh-hans
+    update-locale LANG=en_US.UTF-8 LC_ALL=zh_CN.UTF-8
+    echo "中文环境安装完成"
+
+    # 安装 curl wget
+     apt install -y curl wget
+    echo "安装 curl wget 完成"
+
+
+    # 安装 ping
+     apt install -y iputils-ping
+    echo "安装 ping 完成"
 
     # 安装 wget
      apt install -y wget
@@ -45,12 +51,8 @@ if [ "$(uname)" = "Linux" ]; then
     # 安装 node
      apt install -y npm
      ./chsrc set npm
-     npm install -g n live-server pm2 nodemon nrm
     echo "安装 node 完成"
 
-    # 使用最新node版本
-    n stable
-    echo "使用最新node版本完成"
 
     # 安装 zsh
      apt install -y zsh
@@ -133,6 +135,13 @@ cp zshrc ~/.zshrc
 echo "导入 zsh 配置完成"
 mkdir ~/.config && cp starship.toml ~/.config/starship.toml && zsh
 echo "导入 starship 配置完成"
+# 默认使用zsh
+chsh -s /bin/zsh
+echo "默认使用zsh完成"
 
 # node
- npm install -g vtop live-server
+npm install -g vtop n live-server pm2 nodemon nrm
+
+# 使用最新node版本
+n stable
+echo "使用最新node版本完成"
