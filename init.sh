@@ -71,6 +71,34 @@ setup_macos() {
     log_info "正在安装常用软件包..."
     brew install wget git htop node zsh starship neofetch
     log_info "常用软件包安装完成。"
+
+    # 安装 CaskaydiaCove Nerd Font Mono 字体
+    log_info "正在检查并安装 CaskaydiaCove Nerd Font Mono 字体..."
+    
+    # 检查字体文件是否真正存在
+    FONT_FILE="$HOME/Library/Fonts/CaskaydiaCoveNerdFontMono-Regular.ttf"
+    
+    if [ -f "$FONT_FILE" ]; then
+        log_info "CaskaydiaCove Nerd Font Mono 字体已安装。"
+    else
+        log_info "字体文件不存在，正在安装..."
+        
+        # 如果 cask 已安装但文件不存在，先卸载
+        if brew list --cask font-caskaydia-cove-nerd-font >/dev/null 2>&1; then
+            log_info "发现已安装的 cask 但字体文件缺失，正在重新安装..."
+            brew uninstall --cask font-caskaydia-cove-nerd-font
+        fi
+        
+        # 重新安装字体
+        brew install --cask font-caskaydia-cove-nerd-font
+        
+        # 验证安装结果
+        if [ -f "$FONT_FILE" ]; then
+            log_info "CaskaydiaCove Nerd Font Mono 字体安装完成。"
+        else
+            log_error "字体安装失败，请手动检查。"
+        fi
+    fi
 }
 
 # 设置 Zsh, Oh My Zsh, 插件和配置文件的函数
@@ -130,8 +158,13 @@ setup_shell() {
     log_info "正在安装全局 npm 包..."
     npm install -g vtop n live-server pm2 nodemon nrm
 
+    # 设置 n 工具的安装目录为用户目录，避免权限问题
+    export N_PREFIX="$HOME/.n"
+    export PATH="$N_PREFIX/bin:$PATH"
+    
     # 使用 n 工具更新 Node.js 到最新的稳定版本
     log_info "正在更新 Node.js 到最新稳定版..."
+    log_info "设置 N_PREFIX=$N_PREFIX 以避免权限问题..."
     n stable
 
     # 更改默认 shell 为 Zsh
