@@ -3,12 +3,12 @@
 
 # Path to your oh-my-zsh installation.
 export ZSH="$HOME/.oh-my-zsh"
-
 # Set name of the theme to load --- if set to "random", it will
 # load a random theme each time oh-my-zsh is loaded, in which case,
 # to know which specific one was loaded, run: echo $RANDOM_THEME
 # See https://github.com/ohmyzsh/ohmyzsh/wiki/Themes
 ZSH_THEME="agnoster"
+
 
 # Set list of themes to pick from when loading at random
 # Setting this variable when ZSH_THEME=random will cause zsh to load
@@ -105,3 +105,39 @@ export PATH="$N_PREFIX/bin:$PATH"
 # alias ohmyzsh="mate ~/.oh-my-zsh"
 eval "$(starship init zsh)"
 neofetch
+
+# VPN代理设置
+# 定义ovpn命令 - 开启VPN代理
+ovpn() {
+    export http_proxy=http://127.0.0.1:10808
+    export https_proxy=http://127.0.0.1:10808
+    export all_proxy=socks5://127.0.0.1:10808
+    export HTTP_PROXY=http://127.0.0.1:10808
+    export HTTPS_PROXY=http://127.0.0.1:10808
+    export ALL_PROXY=socks5://127.0.0.1:10808
+    echo "✅ VPN代理已开启"
+    echo "HTTP代理: $http_proxy"
+    echo "HTTPS代理: $https_proxy"
+    echo "全局代理: $all_proxy"
+}
+
+# 定义cvpn命令 - 关闭VPN代理
+cvpn() {
+    unset http_proxy
+    unset https_proxy
+    unset all_proxy
+    unset HTTP_PROXY
+    unset HTTPS_PROXY
+    unset ALL_PROXY
+    echo "❌ VPN代理已关闭"
+}
+
+ovpn
+
+# Git & Terminal Chinese Support
+export LANG="zh_CN.UTF-8"
+export LESSCHARSET=utf-8
+export LC_ALL="zh_CN.UTF-8"
+# Added by Windsurf
+export PATH="/Users/admin/.codeium/windsurf/bin:$PATH"
+

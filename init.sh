@@ -142,7 +142,7 @@ setup_shell() {
         log_info "备份已存在的 .zshrc 文件..."
         mv "$HOME/.zshrc" "$HOME/.zshrc.bak.${TIMESTAMP}"
     fi
-    cp zshrc "$HOME/.zshrc"
+    cp .zshrc "$HOME/.zshrc"
     log_info ".zshrc 配置文件导入完成。"
 
     # 备份并复制 starship.toml
