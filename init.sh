@@ -177,6 +177,57 @@ setup_shell() {
     fi
 }
 
+
+# brew安装软件
+setup_brew() {
+    log_info "开始安装 brew 软件..."
+    log_info "注意：如果软件已安装，将强制重新安装最新版本"
+    
+    # 微信
+    log_info "正在安装/更新 微信..."
+    brew install --cask --force wechat
+    
+    # 飞书      
+    log_info "正在安装/更新 飞书..."
+    brew install --cask --force feishu
+    
+    # 网易云音乐
+    log_info "正在安装/更新 网易云音乐..."
+    brew install --cask --force neteasemusic
+    
+    # 喜马拉雅
+    log_info "正在安装/更新 喜马拉雅..."
+    brew install --cask --force ximalaya
+    
+    # Warp
+    log_info "正在安装/更新 Warp..."
+    brew install --cask --force warp
+    
+    # openinterminal
+    log_info "正在安装/更新 OpenInTerminal..."
+    brew install --cask --force openinterminal
+    
+    # tencent-lemon
+    log_info "正在安装/更新 腾讯柠檬清理..."
+    brew install --cask --force tencent-lemon
+    
+    # Windsurf
+    log_info "正在安装/更新 Windsurf..."
+    brew install --cask --force windsurf
+    
+    # visual-studio-code  
+    log_info "正在安装/更新 Visual Studio Code..."
+    brew install --cask --force visual-studio-code
+
+    # google-chrome  
+    log_info "正在安装/更新 Google Chrome..."
+    brew install --cask --force google-chrome
+
+    
+    log_info "所有 brew 软件安装/更新完成！"
+}
+
+
 # --- 主程序执行 ---
 
 main() {
@@ -187,6 +238,7 @@ main() {
     elif [ "$OS" = "Darwin" ]; then
         setup_macos
         setup_shell
+        setup_brew
         log_info "macOS 系统设置完成！"
         log_info "请重启终端以使所有更改生效。"
     else
