@@ -15,10 +15,30 @@ log_error() {
     echo "ERROR: $1" >&2
 }
 
-# 为 Ubuntu/Linux 系统进行设置的函数
+# 检测是否在容器环境中运行
+is_container() {
+    # 方法1: 检查 /.dockerenv 文件
+    [ -f /.dockerenv ] && return 0
+    
+    # 方法2: 检查 cgroup
+    [ -f /proc/1/cgroup ] && grep -q docker /proc/1/cgroup && return 0
+    
+    # 方法3: 检查 PID 1 的进程名
+    [ "$(cat /proc/1/comm 2>/dev/null)" != "systemd" ] && return 0
+    
+    return 1
+}
+
 # 为 Ubuntu/Linux 系统进行设置的函数
 setup_ubuntu() {
     log_info "开始为 Linux (Ubuntu) 进行设置..."
+
+    # 检测容器环境
+    IN_CONTAINER=false
+    if is_container; then
+        IN_CONTAINER=true
+        log_info "检测到容器环境，将跳过部分系统级配置"
+    fi
 
     # 检查是否以 root 权限运行
     if [ "$(id -u)" -ne 0 ]; then
@@ -30,86 +50,127 @@ setup_ubuntu() {
     export DEBIAN_FRONTEND=noninteractive
     
     # 确保基础工具存在
-    # apt-utils: 解决 "debconf: delaying package configuration..." 警告
+    log_info "正在检查并安装基础工具..."
     if ! command -v curl >/dev/null 2>&1 || ! dpkg -s apt-utils >/dev/null 2>&1; then
-        apt-get update && apt-get install -y curl apt-utils
+        apt-get update -qq && apt-get install -y -qq curl apt-utils
     fi
 
     # 优先解决中文乱码问题
     if ! command -v locale-gen >/dev/null 2>&1; then
-        apt-get update && apt-get install -y locales
+        apt-get install -y -qq locales
     fi
     
-    log_info "正在配置语言环境以解决乱码..."
+    log_info "正在配置语言环境..."
     # 生成必要的 locale
-    locale-gen zh_CN.UTF-8 en_US.UTF-8
+    locale-gen zh_CN.UTF-8 en_US.UTF-8 >/dev/null 2>&1
     
-    # 立即在当前 shell 中应用 (修复脚本后续输出的乱码)
+    # 立即在当前 shell 中应用
     export LANG=zh_CN.UTF-8
     export LC_ALL=zh_CN.UTF-8
     export LANGUAGE=zh_CN.UTF-8
     
-    update-locale LANG=zh_CN.UTF-8 LC_ALL=zh_CN.UTF-8 LANGUAGE=zh_CN.UTF-8
+    update-locale LANG=zh_CN.UTF-8 LC_ALL=zh_CN.UTF-8 LANGUAGE=zh_CN.UTF-8 2>/dev/null || true
     log_info "语言环境配置完成。"
 
     # 1. 切换软件源 (chsrc)
     log_info "正在更新软件包源..."
-    curl -L https://gitee.com/RubyMetric/chsrc/releases/download/pre/chsrc-x64-linux -o /tmp/chsrc
-    chmod +x /tmp/chsrc
+    if [ ! -f /tmp/chsrc ]; then
+        curl -L https://gitee.com/RubyMetric/chsrc/releases/download/pre/chsrc-x64-linux -o /tmp/chsrc
+        chmod +x /tmp/chsrc
+    fi
     /tmp/chsrc set ubuntu
     log_info "软件源切换完成。"
 
     # 2. 安装常用软件包
     log_info "正在安装系统更新和常用软件包 (可能需要较长时间)..."
-    apt-get update && apt-get upgrade -y
-    apt-get install -y wget iputils-ping htop git vim neofetch zsh npm language-pack-zh-hans
+    apt-get update -qq
+    apt-get upgrade -y -qq
+    apt-get install -y -qq wget iputils-ping htop git vim neofetch zsh npm language-pack-zh-hans
     log_info "常用软件包安装完成。"
 
-    # 安装并开启 SSH 服务
-    log_info "正在安装并开启 SSH 服务..."
-    apt-get install -y openssh-server
+    # 3. 安装并配置 SSH 服务
+    log_info "正在安装 SSH 服务..."
+    apt-get install -y -qq openssh-server
     
-    # 检测是否使用 systemd (Docker 容器通常没有 systemd)
-    if pidof systemd >/dev/null 2>&1 || [ -d /run/systemd/system ]; then
-        log_info "检测到 systemd，使用 systemctl 启动 SSH..."
-        systemctl enable --now ssh
+    # 确保 SSH 目录存在
+    mkdir -p /run/sshd
+    
+    # 在容器中配置 SSH 允许 root 登录（可选）
+    if [ "$IN_CONTAINER" = true ]; then
+        log_info "配置 SSH 允许 root 登录（容器环境）..."
+        sed -i 's/^#*PermitRootLogin.*/PermitRootLogin yes/' /etc/ssh/sshd_config
+        sed -i 's/^#*PasswordAuthentication.*/PasswordAuthentication yes/' /etc/ssh/sshd_config
+    fi
+    
+    # 检测并启动 SSH 服务
+    if [ -d /run/systemd/system ] && command -v systemctl >/dev/null 2>&1; then
+        log_info "使用 systemd 启动 SSH..."
+        systemctl enable ssh 2>/dev/null || true
+        systemctl start ssh 2>/dev/null || true
     else
-        log_info "未检测到 systemd (可能在 Docker 中)，尝试使用 service 启动 SSH..."
-        service ssh start || /etc/init.d/ssh start
+        log_info "使用 service 启动 SSH（容器环境）..."
+        service ssh start 2>/dev/null || /usr/sbin/sshd
     fi
-
-    # 尝试允许 SSH (如果 ufw 存在且拥有权限)
-    if command -v ufw >/dev/null 2>&1; then
-        ufw allow ssh || true
-    fi
-    log_info "SSH 服务已尝试启动。"
-
-    # 安装 Docker
-    log_info "正在安装 Docker..."
-    if command -v docker >/dev/null 2>&1; then
-        log_info "Docker 已安装。"
+    
+    # 验证 SSH 是否运行
+    if pgrep -x sshd >/dev/null; then
+        log_info "✓ SSH 服务已成功启动"
     else
-        curl -fsSL https://get.docker.com | sh
-        log_info "Docker 安装完成。"
+        log_info "⚠ SSH 服务可能未启动，请手动检查"
     fi
 
-    # 设置 npm 镜像源 & Docker 镜像加速
-    log_info "正在设置镜像源加速..."
+    # 4. 安装 Docker（仅在非容器环境）
+    if [ "$IN_CONTAINER" = false ]; then
+        log_info "正在安装 Docker..."
+        if command -v docker >/dev/null 2>&1; then
+            log_info "Docker 已安装。"
+        else
+            curl -fsSL https://get.docker.com | sh
+            log_info "Docker 安装完成。"
+        fi
+    else
+        log_info "容器环境中跳过 Docker 安装"
+    fi
+
+    # 5. 设置镜像源
+    log_info "正在设置 npm 镜像源..."
     /tmp/chsrc set npm
     
-    # 如果 Docker 已安装，尝试配置 Docker 镜像加速
-    if command -v docker >/dev/null 2>&1; then
-         log_info "正在设置 Docker 镜像加速..."
+    # Docker 镜像加速（仅在非容器环境且 Docker 已安装）
+    if [ "$IN_CONTAINER" = false ] && command -v docker >/dev/null 2>&1; then
+        log_info "正在设置 Docker 镜像加速..."
         /tmp/chsrc set docker
+        
+        # 如果有 systemd，重启 Docker
+        if command -v systemctl >/dev/null 2>&1; then
+            log_info "重启 Docker 服务以应用镜像加速..."
+            systemctl daemon-reload 2>/dev/null || true
+            systemctl restart docker 2>/dev/null || true
+        fi
     fi
     
-    rm /tmp/chsrc # 清理下载的工具
+    # 清理临时文件
+    rm -f /tmp/chsrc
     log_info "镜像源设置完成。"
 
-    # 安装 Starship (跨 shell 提示符)
+    # 6. 安装 Starship（跨 shell 提示符）
     log_info "正在安装 Starship..."
-    curl -sS https://starship.rs/install.sh | sh -s -- --yes
-    log_info "Starship 安装完成。"
+    if ! command -v starship >/dev/null 2>&1; then
+        curl -sS https://starship.rs/install.sh | sh -s -- --yes
+        log_info "Starship 安装完成。"
+    else
+        log_info "Starship 已安装。"
+    fi
+    
+    # 如果在容器中且是 root 用户，提示可以直接配置 shell
+    if [ "$IN_CONTAINER" = true ] && [ "$(id -u)" -eq 0 ]; then
+        log_info "================================"
+        log_info "容器环境检测完成！"
+        log_info "您可以继续运行此脚本配置 Shell 环境，或者："
+        log_info "1. 设置 root 密码: passwd"
+        log_info "2. 通过 SSH 连接: ssh root@<容器IP>"
+        log_info "================================"
+    fi
 }
 
 # 为 macOS 系统进行设置的函数
@@ -159,13 +220,18 @@ setup_macos() {
 }
 
 # 设置 Zsh, Oh My Zsh, 插件和配置文件的函数
-# 注意：此函数应以普通用户身份运行，但如果是 root 用户且明确需要配置也可以运行
 setup_shell() {
     log_info "开始设置 Shell (Zsh, Oh My Zsh, Starship)..."
 
+    # 检测容器环境
+    IN_CONTAINER=false
+    if is_container; then
+        IN_CONTAINER=true
+    fi
+
     # 如果是 root 用户，给出提示但继续执行
     if [ "$(id -u)" -eq 0 ]; then
-        log_info "检测到当前为 root 用户，正在为 root 用户配置 Shell环境..."
+        log_info "检测到当前为 root 用户，正在为 root 用户配置 Shell 环境..."
     fi
 
     # 安装 Oh My Zsh
@@ -174,7 +240,6 @@ setup_shell() {
         sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended
     else
         log_info "Oh My Zsh 已安装。"
-        # 如果 zshrc 不存在，可能需要从 template 复制，防止后续 mv 失败 (虽然下面会 cp .zshrc)
     fi
 
     # 定义 Zsh 自定义插件目录
@@ -194,13 +259,21 @@ setup_shell() {
     log_info "正在备份并导入配置文件..."
     TIMESTAMP=$(date +%Y-%m-%d_%H-%M-%S)
 
+    # 获取脚本所在目录
+    SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+
     # 备份并复制 .zshrc
     if [ -f "$HOME/.zshrc" ]; then
         log_info "备份已存在的 .zshrc 文件..."
         mv "$HOME/.zshrc" "$HOME/.zshrc.bak.${TIMESTAMP}"
     fi
-    cp .zshrc "$HOME/.zshrc"
-    log_info ".zshrc 配置文件导入完成。"
+    
+    if [ -f "${SCRIPT_DIR}/.zshrc" ]; then
+        cp "${SCRIPT_DIR}/.zshrc" "$HOME/.zshrc"
+        log_info ".zshrc 配置文件导入完成。"
+    else
+        log_info "⚠ 未找到 .zshrc 配置文件，使用默认配置"
+    fi
 
     # 备份并复制 starship.toml
     mkdir -p "$HOME/.config"
@@ -208,8 +281,13 @@ setup_shell() {
         log_info "备份已存在的 starship.toml 文件..."
         mv "$HOME/.config/starship.toml" "$HOME/.config/starship.toml.bak.${TIMESTAMP}"
     fi
-    cp starship.toml "$HOME/.config/starship.toml"
-    log_info "starship.toml 配置文件导入完成。"
+    
+    if [ -f "${SCRIPT_DIR}/starship.toml" ]; then
+        cp "${SCRIPT_DIR}/starship.toml" "$HOME/.config/starship.toml"
+        log_info "starship.toml 配置文件导入完成。"
+    else
+        log_info "⚠ 未找到 starship.toml 配置文件，使用默认配置"
+    fi
 
     # 安装全局 npm 包
     log_info "正在安装全局 npm 包..."
@@ -224,11 +302,17 @@ setup_shell() {
     log_info "设置 N_PREFIX=$N_PREFIX 以避免权限问题..."
     n stable
 
-    # 更改默认 shell 为 Zsh
+    # 更改默认 shell 为 Zsh（在容器中可能失败，跳过）
     if [ "$SHELL" != "/bin/zsh" ] && [ "$SHELL" != "/usr/bin/zsh" ]; then
-        log_info "正在更改默认 shell 为 Zsh，可能需要您输入密码。"
-        chsh -s "$(which zsh)"
-        log_info "默认 shell 已更改。请重启终端以生效。"
+        if [ "$IN_CONTAINER" = false ]; then
+            log_info "正在更改默认 shell 为 Zsh，可能需要您输入密码。"
+            chsh -s "$(which zsh)" 2>/dev/null || {
+                log_info "⚠ 无法自动更改默认 shell，请手动执行: chsh -s \$(which zsh)"
+            }
+        else
+            log_info "容器环境中跳过 chsh 操作"
+            log_info "提示：在容器中启动 zsh 可直接执行: zsh"
+        fi
     else
         log_info "默认 shell 已是 Zsh。"
     fi
@@ -289,9 +373,50 @@ setup_brew() {
 
 main() {
     OS="$(uname)"
+    
     if [ "$OS" = "Linux" ]; then
-        setup_ubuntu
-        log_info "Linux 系统设置完成。现在，请以普通用户身份（不要使用 sudo）再次运行此脚本来完成 shell 的配置。"
+        # 检测是否在容器中运行
+        IN_CONTAINER=false
+        if is_container; then
+            IN_CONTAINER=true
+        fi
+        
+        # 如果是 root 用户运行
+        if [ "$(id -u)" -eq 0 ]; then
+            setup_ubuntu
+            
+            # 在容器环境中，提供选项是否继续配置 shell
+            if [ "$IN_CONTAINER" = true ]; then
+                log_info ""
+                log_info "=========================================="
+                log_info "系统设置完成！"
+                log_info ""
+                log_info "下一步选项："
+                log_info "1. 继续配置 Shell (为 root 用户)"
+                log_info "2. 退出并创建普通用户后再运行"
+                log_info ""
+                log_info "在容器环境中，建议直接为 root 用户配置 Shell"
+                log_info "=========================================="
+                log_info ""
+                
+                # 默认继续配置 shell
+                log_info "正在为 root 用户配置 Shell 环境..."
+                setup_shell
+                log_info ""
+                log_info "✓ 所有配置完成！"
+                log_info "现在可以执行: source ~/.zshrc 或重新进入 shell"
+            else
+                # 非容器环境，提示使用普通用户
+                log_info "Linux 系统设置完成。"
+                log_info "建议：以普通用户身份（不要使用 sudo）再次运行此脚本来完成 shell 的配置。"
+            fi
+        else
+            # 普通用户运行，直接配置 shell
+            log_info "检测到普通用户，开始配置 Shell 环境..."
+            setup_shell
+            log_info "Shell 配置完成！请重启终端以使所有更改生效。"
+        fi
+        
     elif [ "$OS" = "Darwin" ]; then
         setup_macos
         setup_shell
@@ -306,3 +431,4 @@ main() {
 
 # 执行主函数
 main
+
