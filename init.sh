@@ -16,6 +16,7 @@ log_error() {
 }
 
 # 为 Ubuntu/Linux 系统进行设置的函数
+# 为 Ubuntu/Linux 系统进行设置的函数
 setup_ubuntu() {
     log_info "开始为 Linux (Ubuntu) 进行设置..."
 
@@ -29,8 +30,9 @@ setup_ubuntu() {
     export DEBIAN_FRONTEND=noninteractive
     
     # 确保基础工具存在
-    if ! command -v curl >/dev/null 2>&1; then
-        apt-get update && apt-get install -y curl
+    # apt-utils: 解决 "debconf: delaying package configuration..." 警告
+    if ! command -v curl >/dev/null 2>&1 || ! dpkg -s apt-utils >/dev/null 2>&1; then
+        apt-get update && apt-get install -y curl apt-utils
     fi
 
     # 优先解决中文乱码问题
@@ -91,11 +93,18 @@ setup_ubuntu() {
         log_info "Docker 安装完成。"
     fi
 
-    # 设置 npm 镜像源
-    log_info "正在设置 npm 镜像源..."
-    /tmp/chsrc set npm system
+    # 设置 npm 镜像源 & Docker 镜像加速
+    log_info "正在设置镜像源加速..."
+    /tmp/chsrc set npm
+    
+    # 如果 Docker 已安装，尝试配置 Docker 镜像加速
+    if command -v docker >/dev/null 2>&1; then
+         log_info "正在设置 Docker 镜像加速..."
+        /tmp/chsrc set docker
+    fi
+    
     rm /tmp/chsrc # 清理下载的工具
-    log_info "npm 镜像源设置完成。"
+    log_info "镜像源设置完成。"
 
     # 安装 Starship (跨 shell 提示符)
     log_info "正在安装 Starship..."
