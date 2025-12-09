@@ -43,6 +43,25 @@ setup_ubuntu() {
     apt-get install -y curl wget iputils-ping htop git vim neofetch zsh npm
     log_info "常用软件包安装完成。"
 
+    # 安装并开启 SSH 服务
+    log_info "正在安装并开启 SSH 服务..."
+    apt-get install -y openssh-server
+    systemctl enable --now ssh
+    # 尝试允许 SSH (如果 ufw 存在)
+    if command -v ufw >/dev/null 2>&1; then
+        ufw allow ssh || true
+    fi
+    log_info "SSH 服务已开启。"
+
+    # 安装 Docker
+    log_info "正在安装 Docker..."
+    if command -v docker >/dev/null 2>&1; then
+        log_info "Docker 已安装。"
+    else
+        curl -fsSL https://get.docker.com | sh
+        log_info "Docker 安装完成。"
+    fi
+
     # 设置 npm 镜像源
     log_info "正在设置 npm 镜像源..."
     /tmp/chsrc set npm
