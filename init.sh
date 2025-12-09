@@ -66,12 +66,21 @@ setup_ubuntu() {
     # 安装并开启 SSH 服务
     log_info "正在安装并开启 SSH 服务..."
     apt-get install -y openssh-server
-    systemctl enable --now ssh
-    # 尝试允许 SSH (如果 ufw 存在)
+    
+    # 检测是否使用 systemd (Docker 容器通常没有 systemd)
+    if pidof systemd >/dev/null 2>&1 || [ -d /run/systemd/system ]; then
+        log_info "检测到 systemd，使用 systemctl 启动 SSH..."
+        systemctl enable --now ssh
+    else
+        log_info "未检测到 systemd (可能在 Docker 中)，尝试使用 service 启动 SSH..."
+        service ssh start || /etc/init.d/ssh start
+    fi
+
+    # 尝试允许 SSH (如果 ufw 存在且拥有权限)
     if command -v ufw >/dev/null 2>&1; then
         ufw allow ssh || true
     fi
-    log_info "SSH 服务已开启。"
+    log_info "SSH 服务已尝试启动。"
 
     # 安装 Docker
     log_info "正在安装 Docker..."
