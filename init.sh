@@ -25,22 +25,42 @@ setup_ubuntu() {
         exit 1
     fi
 
-    # 切换软件源以加快下载速度
+    # 0. 基础环境准备 (防止乱码和缺少基础工具)
+    export DEBIAN_FRONTEND=noninteractive
+    
+    # 确保基础工具存在
+    if ! command -v curl >/dev/null 2>&1; then
+        apt-get update && apt-get install -y curl
+    fi
+
+    # 优先解决中文乱码问题
+    if ! command -v locale-gen >/dev/null 2>&1; then
+        apt-get update && apt-get install -y locales
+    fi
+    
+    log_info "正在配置语言环境以解决乱码..."
+    # 生成必要的 locale
+    locale-gen zh_CN.UTF-8 en_US.UTF-8
+    
+    # 立即在当前 shell 中应用 (修复脚本后续输出的乱码)
+    export LANG=zh_CN.UTF-8
+    export LC_ALL=zh_CN.UTF-8
+    export LANGUAGE=zh_CN.UTF-8
+    
+    update-locale LANG=zh_CN.UTF-8 LC_ALL=zh_CN.UTF-8 LANGUAGE=zh_CN.UTF-8
+    log_info "语言环境配置完成。"
+
+    # 1. 切换软件源 (chsrc)
     log_info "正在更新软件包源..."
     curl -L https://gitee.com/RubyMetric/chsrc/releases/download/pre/chsrc-x64-linux -o /tmp/chsrc
     chmod +x /tmp/chsrc
     /tmp/chsrc set ubuntu
     log_info "软件源切换完成。"
 
-    # 安装中文语言包
-    log_info "正在安装中文语言包..."
-    apt-get update && apt-get install -y language-pack-zh-hans
-    update-locale LANG=en_US.UTF-8 LC_ALL=zh_CN.UTF-8
-    log_info "中文语言包安装完成。"
-
-    # 安装常用软件包
-    log_info "正在安装常用软件包..."
-    apt-get install -y curl wget iputils-ping htop git vim neofetch zsh npm
+    # 2. 安装常用软件包
+    log_info "正在安装系统更新和常用软件包 (可能需要较长时间)..."
+    apt-get update && apt-get upgrade -y
+    apt-get install -y wget iputils-ping htop git vim neofetch zsh npm language-pack-zh-hans
     log_info "常用软件包安装完成。"
 
     # 安装并开启 SSH 服务
@@ -64,7 +84,7 @@ setup_ubuntu() {
 
     # 设置 npm 镜像源
     log_info "正在设置 npm 镜像源..."
-    /tmp/chsrc set npm
+    /tmp/chsrc set npm system
     rm /tmp/chsrc # 清理下载的工具
     log_info "npm 镜像源设置完成。"
 
@@ -121,14 +141,13 @@ setup_macos() {
 }
 
 # 设置 Zsh, Oh My Zsh, 插件和配置文件的函数
-# 注意：此函数应以普通用户身份运行，而不是 root
+# 注意：此函数应以普通用户身份运行，但如果是 root 用户且明确需要配置也可以运行
 setup_shell() {
     log_info "开始设置 Shell (Zsh, Oh My Zsh, Starship)..."
 
-    # 检查是否以 root 身份运行，因为主目录的配置应属于用户
+    # 如果是 root 用户，给出提示但继续执行
     if [ "$(id -u)" -eq 0 ]; then
-        log_error "Shell 设置部分不应以 root 身份运行，请以普通用户身份执行此部分。"
-        exit 1
+        log_info "检测到当前为 root 用户，正在为 root 用户配置 Shell环境..."
     fi
 
     # 安装 Oh My Zsh
@@ -137,6 +156,7 @@ setup_shell() {
         sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended
     else
         log_info "Oh My Zsh 已安装。"
+        # 如果 zshrc 不存在，可能需要从 template 复制，防止后续 mv 失败 (虽然下面会 cp .zshrc)
     fi
 
     # 定义 Zsh 自定义插件目录
