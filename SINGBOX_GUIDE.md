@@ -1,6 +1,34 @@
 # sing-box 使用指南
 
-本指南介绍如何在 Linux 环境中使用 sing-box 作为全局透明代理（TUN 模式）。
+本指南介绍如何在 Linux 环境（包括 Docker 容器）中使用 sing-box 作为全局透明代理（TUN 模式）。
+
+## 🎯 环境检测与模式选择
+
+安装脚本会**自动检测运行环境**并选择最佳配置：
+
+| 环境              | 检测方式                               | 使用模式                     | 原因                                              |
+| ----------------- | -------------------------------------- | ---------------------------- | ------------------------------------------------- |
+| **Docker 容器**   | 检测 `/.dockerenv` 或 `/proc/1/cgroup` | HTTP/SOCKS5 代理（禁用 TUN） | 容器内开启 TUN 需要特权模式，使用 HTTP 代理更简单 |
+| **物理机/虚拟机** | systemd 进程                           | TUN 模式（全局透明代理）     | 全局代理，无需为每个应用配置                      |
+
+### 容器环境 (HTTP 代理模式)
+
+-   ✅ 监听端口：`0.0.0.0:2080`（混合 HTTP/SOCKS5）
+-   ✅ 使用方式：设置环境变量 `http_proxy` 和 `https_proxy`
+-   ✅ 智能分流：国内直连，国外代理
+
+### 物理机环境 (TUN 模式)
+
+-   ✅ TUN 设备：`tun0`（虚拟网卡）
+-   ✅ 全局透明代理：所有流量自动经过代理
+-   ✅ 额外提供：`127.0.0.1:2080`（HTTP/SOCKS5）
+
+## 📦 文件列表
+
+-   **`singbox-config.json`** - sing-box 配置文件（物理机用，启用 TUN）
+-   **`install-singbox.sh`** - 一键安装脚本（自动检测环境）
+-   **`check-singbox.sh`** - 状态检查脚本
+-   **`SINGBOX_GUIDE.md`** - 本文档
 
 ## 📋 配置文件说明
 
@@ -264,6 +292,91 @@ cat /etc/resolv.conf
 
 # 手动测试 DNS
 dig @127.0.0.1 google.com
+```
+
+### 容器环境问题
+
+#### 问题：测试脚本卡住不动
+
+**原因**：sing-box 进程未运行，但 TUN 路由规则仍在，流量被路由到不存在的后端。
+
+**解决方案**：
+
+```bash
+# 1. 快速检查
+bash /code/check-singbox.sh
+
+# 2. 检查进程
+ps aux | grep sing-box
+
+# 3. 重启 sing-box
+start-singbox.sh
+
+# 4. 查看日志
+tail -f /var/log/sing-box.log
+```
+
+#### 问题：容器重启后 sing-box 未运行
+
+**解决方案**：
+
+```bash
+# 重新启动 sing-box
+docker exec ubuntu start-singbox.sh
+```
+
+#### 问题：curl 使用代理环境变量测试时超时
+
+**原因**：TUN 模式已经是全局代理，不需要额外设置 `http_proxy` 环境变量。
+
+**解决方案**：
+
+```bash
+# ❌ 错误方式（会导致路由冲突）
+export http_proxy=http://127.0.0.1:2080
+curl https://www.google.com
+
+# ✅ 正确方式（直接使用 TUN）
+unset http_proxy https_proxy
+curl https://www.google.com
+```
+
+#### 容器环境快速命令
+
+```bash
+# 启动 sing-box
+docker exec ubuntu start-singbox.sh
+
+# 停止 sing-box
+docker exec ubuntu stop-singbox.sh
+
+# 查看状态
+docker exec ubuntu ps aux | grep sing-box
+
+# 查看日志
+docker exec ubuntu tail -20 /var/log/sing-box.log
+
+# 快速测试
+docker exec ubuntu bash /code/test-singbox-simple.sh
+```
+
+#### 容器环境快速参考
+
+```bash
+# 启动 sing-box
+docker exec ubuntu start-singbox.sh
+
+# 停止 sing-box
+docker exec ubuntu stop-singbox.sh
+
+# 检查状态
+docker exec ubuntu bash /code/check-singbox.sh
+
+# 查看日志
+docker exec ubuntu tail -20 /var/log/sing-box.log
+
+# 进入容器
+docker exec -it ubuntu zsh
 ```
 
 ## 🔄 订阅转换
