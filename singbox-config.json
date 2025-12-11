@@ -1,0 +1,115 @@
+{
+    "log": {
+        "level": "info",
+        "timestamp": true
+    },
+    "dns": {
+        "servers": [
+            {
+                "tag": "google",
+                "address": "https://8.8.8.8/dns-query"
+            },
+            {
+                "tag": "cloudflare",
+                "address": "https://1.1.1.1/dns-query"
+            },
+            {
+                "tag": "local",
+                "address": "223.5.5.5",
+                "detour": "direct"
+            }
+        ],
+        "rules": [
+            {
+                "geosite": "cn",
+                "server": "local"
+            }
+        ],
+        "final": "google",
+        "strategy": "ipv4_only"
+    },
+    "inbounds": [
+        {
+            "type": "tun",
+            "tag": "tun-in",
+            "interface_name": "tun0",
+            "inet4_address": "172.19.0.1/30",
+            "inet6_address": "fdfe:dcba:9876::1/126",
+            "mtu": 9000,
+            "auto_route": true,
+            "strict_route": true,
+            "stack": "system",
+            "sniff": true,
+            "sniff_override_destination": true
+        },
+        {
+            "type": "mixed",
+            "tag": "mixed-in",
+            "listen": "127.0.0.1",
+            "listen_port": 2080,
+            "sniff": true,
+            "sniff_override_destination": true
+        }
+    ],
+    "outbounds": [
+        {
+            "type": "vless",
+            "tag": "zj0ppfq6",
+            "server": "vpn.920601.xyz",
+            "server_port": 27469,
+            "uuid": "11ddd3ac-2457-4f2b-a72e-721fd44c432a",
+            "flow": "",
+            "network": "tcp",
+            "tls": {
+                "enabled": false
+            },
+            "packet_encoding": "xudp"
+        },
+        {
+            "type": "direct",
+            "tag": "direct"
+        },
+        {
+            "type": "block",
+            "tag": "block"
+        },
+        {
+            "type": "dns",
+            "tag": "dns-out"
+        }
+    ],
+    "route": {
+        "rules": [
+            {
+                "protocol": "dns",
+                "outbound": "dns-out"
+            },
+            {
+                "geosite": "cn",
+                "outbound": "direct"
+            },
+            {
+                "geoip": "cn",
+                "outbound": "direct"
+            },
+            {
+                "geosite": "category-ads-all",
+                "outbound": "block"
+            },
+            {
+                "ip_cidr": ["224.0.0.0/3", "ff00::/8"],
+                "outbound": "block",
+                "source_ip_cidr": ["224.0.0.0/3", "ff00::/8"]
+            }
+        ],
+        "final": "zj0ppfq6",
+        "auto_detect_interface": true
+    },
+    "experimental": {
+        "cache_file": {
+            "enabled": true,
+            "path": "cache.db",
+            "store_fakeip": true
+        }
+    }
+}

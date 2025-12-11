@@ -1,117 +1,341 @@
-<!--
- * @Author: luofei 501177081@qq.com
- * @Date: 2023-12-18 16:29:20
- * @LastEditors: error: error: git config user.name & please set dead value or install git && error: git config user.email & please set dead value or install git & please set dead value or install git
- * @LastEditTime: 2025-09-24 16:25:00
- * @FilePath: /initEnv/README.md
- * @Description:
- *
--->
+# initEnv - 环境快速配置工具
 
-# initEnv 初始化脚本
+一键配置 Linux/macOS 开发环境，支持 Docker 容器，集成 sing-box 全局代理（TUN 模式）。
 
-`init.sh` 用于在全新或重装后的机器上快速完成常用开发环境配置，兼容 macOS 与 Ubuntu (基于 Debian 的 Linux)。脚本会根据系统类型自动调用不同的安装流程。
+## 📦 项目文件
 
-## 支持平台
+```
+initEnv/
+├── init.sh                  # 主安装脚本（系统环境配置）
+├── install-singbox.sh       # sing-box 自动安装脚本
+├── singbox-config.json      # sing-box 配置文件（已配置 VLESS 节点）
+├── SINGBOX_GUIDE.md         # sing-box 详细使用指南
+├── starship.toml            # Starship 提示符配置
+├── .zshrc                   # Zsh 配置文件
+└── README.md                # 本文件
+```
 
--   macOS (Intel/Apple Silicon)
--   Ubuntu 20.04 及以上版本
+## 🚀 快速开始
 
-## 快速开始
+### 场景 1：在 Docker 容器中使用
 
-1. 确保网络可用，并具备 `curl`/`git` 等基本工具。
-2. 克隆仓库或下载脚本：
-    ```bash
-    git clone https://github.com/yourname/initEnv.git
-    cd initEnv
-    ```
-3. 赋予脚本执行权限：
-    ```bash
-    chmod +x init.sh
-    ```
+```bash
+# 1. 启动容器并挂载项目
+docker run -it --privileged --cap-add=NET_ADMIN \
+  -v /path/to/initEnv:/initEnv \
+  ubuntu:latest
 
-### macOS 执行方式
+# 2. 进入项目目录
+cd /initEnv
 
--   **直接运行**（请勿使用 `sudo`）：
-    ```bash
-    ./init.sh
-    ```
--   脚本会在执行过程中请求安装 Homebrew、应用及字体，可能需要输入密码。
--   运行结束后建议重新打开终端以加载新的 shell 配置。
+# 3. 运行主脚本（配置系统环境）
+sh init.sh
 
-### Ubuntu 执行方式
+# 4. 安装 sing-box 代理（可选）
+bash install-singbox.sh
+```
 
-Ubuntu 的初始化需要分两次执行：
+### 场景 2：在 Linux 服务器上使用
 
-1. **以 root 或使用 `sudo` 运行**（用于系统级配置）
-    ```bash
-    sudo ./init.sh
-    ```
-    完成后脚本会提示再次以普通用户运行。
-2. **切换到普通用户再次运行**（完成 shell 与 Node.js 配置）
-    ```bash
-    ./init.sh
-    ```
+```bash
+# 克隆项目
+git clone https://github.com/YourUsername/initEnv.git
+cd initEnv
 
-## 功能概览
+# 运行主脚本（需要 sudo）
+sudo sh init.sh
 
-### Ubuntu (`setup_ubuntu`)
+# 安装代理（可选）
+sudo bash install-singbox.sh
+```
 
--   校验是否具有 root 权限。
--   下载并使用 `chsrc` 工具切换 apt 与 npm 软件源（基于 Gitee 镜像）。
--   安装中文语言包并更新系统区域设置。
--   安装常用命令行工具：`curl`、`wget`、`ping`、`htop`、`git`、`vim`、`neofetch`、`zsh`、`npm`。
--   安装 Starship 跨 shell 提示符。
+### 场景 3：在 macOS 上使用
 
-> 运行结束后需再次以普通用户执行脚本，以便完成 shell 配置。
+```bash
+# 克隆项目
+git clone https://github.com/YourUsername/initEnv.git
+cd initEnv
 
-### macOS (`setup_macos`)
+# 运行主脚本
+sh init.sh
+```
 
--   检查并安装 Homebrew。
--   通过 Homebrew 安装常用命令行工具：`wget`、`git`、`htop`、`node`、`zsh`、`starship`、`neofetch`。
--   检查 `CaskaydiaCove Nerd Font Mono` 字体是否真正安装；如缺失将卸载后重新安装，确保字体文件存在于 `~/Library/Fonts/`。
+## 📋 功能特性
 
-### Shell 配置 (`setup_shell`)
+### init.sh - 系统环境配置
 
--   仅允许普通用户运行，避免 root 覆盖用户配置。
--   安装 Oh My Zsh（未安装时）。
--   安装 Zsh 插件：`zsh-autosuggestions` 与 `zsh-syntax-highlighting`。
--   备份现有 `~/.zshrc` 与 `~/.config/starship.toml`，并将仓库中的 `.zshrc`、`starship.toml` 拷贝到对应目录。
--   安装全局 npm 包：`vtop`、`n`、`live-server`、`pm2`、`nodemon`、`nrm`。
--   设置 `N_PREFIX=$HOME/.n`，使用 `n` 将 Node.js 更新至最新稳定版，避免系统级权限问题。
--   将默认登录 shell 切换为 Zsh（若当前不是 Zsh）。
+✅ **自动检测环境**
 
-> 请确保在仓库根目录运行脚本，以便正确复制 `.zshrc` 与 `starship.toml`。
+-   Docker 容器检测
+-   系统架构识别
+-   Root/普通用户判断
 
-### macOS 应用安装 (`setup_brew`)
+✅ **Linux 环境配置**
 
-使用 Homebrew Cask 强制安装/更新以下桌面应用（均使用 `--force`，已安装也会覆盖更新）：
+-   软件源切换（国内镜像加速）
+-   中文语言支持
+-   常用工具安装（git, vim, zsh, npm 等）
+-   SSH 服务配置
+-   Docker 安装（非容器环境）
 
--   WeChat
--   飞书 (Feishu)
--   网易云音乐
--   喜马拉雅
--   Warp
--   OpenInTerminal
--   腾讯柠檬清理
--   Windsurf
--   Visual Studio Code
--   Google Chrome
+✅ **Shell 环境美化**
 
-## 注意事项
+-   Oh My Zsh + 插件
+-   Starship 提示符
+-   自动补全和语法高亮
 
--   **权限要求**：Ubuntu 部分需以 root 执行；macOS 整体需以普通用户运行，脚本内部会在需要时请求管理员密码。
--   **网络依赖**：脚本大量使用 `curl`、`git clone` 与 Homebrew，需保持稳定的网络连接。
--   **备份策略**：原有的 `~/.zshrc` 和 `~/.config/starship.toml` 会自动备份为带时间戳的 `*.bak.<timestamp>` 文件。
--   **重复执行**：脚本具备幂等性，但 Homebrew Cask 安装使用 `--force`，可能强制覆盖已有应用版本。
--   **字体验证**：macOS 会验证 `CaskaydiaCove` 字体文件是否存在，不存在时重新安装。
+✅ **macOS 专属**
 
-## 故障排查
+-   Homebrew 自动安装
+-   常用软件批量安装
+-   Nerd Font 字体安装
 
--   遇到网络下载失败，可重试执行脚本或先手动配置网络代理。
--   如果 `n stable` 执行失败，请确认 `~/.n` 目录权限是否正确，并检查 `npm` 是否可用。
--   若默认 shell 未切换，可手动执行 `chsh -s $(which zsh)` 后重新登录。
+### install-singbox.sh - 代理配置
 
-## 许可证
+✅ **全自动安装**
 
-依据项目实际情况补充（如需）。
+-   架构自动检测（amd64/arm64/armv7）
+-   最新版本下载
+-   systemd 服务配置
+-   自动测试连接
+
+✅ **TUN 模式透明代理**
+
+-   全局系统级代理
+-   无需为每个应用配置
+-   智能分流（国内直连，国外代理）
+-   DNS 防污染
+
+✅ **已配置节点**
+
+-   协议：VLESS
+-   服务器：vpn.920601.xyz:27469
+-   开箱即用
+
+## 🎯 核心优势
+
+### 1. 容器友好设计
+
+```bash
+# 传统脚本的问题：
+❌ systemd 不可用导致服务启动失败
+❌ root 用户配置 shell 需要多次运行
+❌ Docker-in-Docker 冲突
+
+# 本项目的解决方案：
+✅ 智能检测容器环境
+✅ 自动使用 service 或直接启动服务
+✅ root 用户一次完成所有配置
+✅ 跳过不兼容的操作
+```
+
+### 2. 开箱即用的代理
+
+```bash
+# 只需两条命令：
+sh init.sh                    # 配置系统
+bash install-singbox.sh       # 安装代理
+
+# 即可实现：
+✅ 全局透明代理（TUN 模式）
+✅ 国内直连，国外加速
+✅ 广告拦截
+✅ DNS 防污染
+```
+
+### 3. 完整的文档支持
+
+-   📖 [SINGBOX_GUIDE.md](./SINGBOX_GUIDE.md) - 详细使用指南
+-   🛠️ 故障排查步骤
+-   💡 进阶配置示例
+-   📝 快速命令参考
+
+## 🔧 配置说明
+
+### 修改代理节点
+
+编辑 `singbox-config.json`，替换为你的节点：
+
+```json
+{
+    "outbounds": [
+        {
+            "type": "vless",
+            "tag": "your-node",
+            "server": "your-server.com",
+            "server_port": 443,
+            "uuid": "your-uuid"
+        }
+    ]
+}
+```
+
+### 添加多个节点
+
+```json
+{
+  "outbounds": [
+    {"tag": "node1", "server": "server1.com", ...},
+    {"tag": "node2", "server": "server2.com", ...}
+  ],
+  "route": {
+    "final": "node1"  // 默认使用节点1
+  }
+}
+```
+
+### 自定义分流规则
+
+```json
+{
+    "route": {
+        "rules": [
+            { "domain": ["github.com"], "outbound": "proxy" },
+            { "geoip": "cn", "outbound": "direct" }
+        ]
+    }
+}
+```
+
+## 📊 使用流程图
+
+```
+┌─────────────────┐
+│  运行 init.sh   │
+└────────┬────────┘
+         │
+         ├─ 检测环境（容器/物理机）
+         ├─ 安装基础工具
+         ├─ 配置软件源
+         ├─ 安装 SSH
+         ├─ 配置 Shell (Zsh + Starship)
+         └─ 提示安装代理
+                │
+                ↓
+      ┌─────────────────────┐
+      │ bash install-singbox.sh │
+      └──────────┬──────────┘
+                 │
+                 ├─ 下载 sing-box
+                 ├─ 配置 TUN 模式
+                 ├─ 创建 systemd 服务
+                 ├─ 启动并测试
+                 └─ ✓ 完成
+```
+
+## 🧪 验证安装
+
+### 检查系统环境
+
+```bash
+# 查看 shell
+echo $SHELL
+
+# 查看 starship
+starship --version
+
+# 查看 Node.js
+node -v
+npm -v
+```
+
+### 检查代理
+
+```bash
+# 查看服务状态
+systemctl status sing-box
+
+# 测试 Google
+curl -I https://www.google.com
+
+# 查看当前 IP
+curl https://api.ip.sb/ip
+
+# 查看 TUN 设备
+ip addr show tun0
+```
+
+## ⚠️ 注意事项
+
+### Docker 容器要求
+
+使用 sing-box TUN 模式需要特权：
+
+```bash
+docker run -it \
+  --privileged \              # 特权模式
+  --cap-add=NET_ADMIN \       # 网络管理权限
+  -v $(pwd):/initEnv \
+  ubuntu:latest
+```
+
+### 权限要求
+
+-   init.sh：需要 root 权限（Linux）
+-   install-singbox.sh：需要 root 权限
+-   TUN 模式：需要 NET_ADMIN 权限
+
+### 网络要求
+
+首次安装需要访问：
+
+-   GitHub (下载工具和配置)
+-   各镜像站（软件包安装）
+-   npm registry（Node.js 包）
+
+## 🐛 故障排查
+
+### SSH 无法启动（容器环境）
+
+```bash
+# 手动启动
+/usr/sbin/sshd
+
+# 查看进程
+ps aux | grep sshd
+```
+
+### sing-box 服务失败
+
+```bash
+# 检查配置
+sing-box check -c /etc/sing-box/config.json
+
+# 查看日志
+journalctl -u sing-box -n 50
+
+# 前台运行
+sing-box run -c /etc/sing-box/config.json
+```
+
+### TUN 设备创建失败
+
+```bash
+# 加载内核模块
+modprobe tun
+
+# 检查设备
+ls -l /dev/net/tun
+```
+
+## 📚 相关文档
+
+-   [sing-box 官方文档](https://sing-box.sagernet.org/)
+-   [Oh My Zsh 文档](https://ohmyz.sh/)
+-   [Starship 文档](https://starship.rs/)
+
+## 🤝 贡献
+
+欢迎提交 Issue 和 Pull Request！
+
+## 📄 许可证
+
+MIT License
+
+---
+
+**快速链接：**
+
+-   📖 [sing-box 详细指南](./SINGBOX_GUIDE.md)
+-   🔧 [配置文件](./singbox-config.json)
+-   🚀 [安装脚本](./install-singbox.sh)

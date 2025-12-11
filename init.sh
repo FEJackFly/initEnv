@@ -162,6 +162,31 @@ setup_ubuntu() {
         log_info "Starship 已安装。"
     fi
     
+    # 7. 询问是否安装 sing-box（TUN 模式代理）
+    if [ "$IN_CONTAINER" = true ]; then
+        log_info ""
+        log_info "=========================================="
+        log_info "检测到容器环境，是否安装 sing-box 代理？"
+        log_info "sing-box 支持 TUN 模式全局透明代理"
+        log_info "=========================================="
+        
+        # 在脚本中默认不安装，可以手动运行
+        INSTALL_SINGBOX=false
+        
+        if [ "$INSTALL_SINGBOX" = true ]; then
+            SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+            if [ -f "$SCRIPT_DIR/install-singbox.sh" ]; then
+                log_info "开始安装 sing-box..."
+                bash "$SCRIPT_DIR/install-singbox.sh"
+            else
+                log_info "提示: 可以稍后运行 'bash install-singbox.sh' 安装代理"
+            fi
+        else
+            log_info "跳过 sing-box 安装"
+            log_info "如需安装，请运行: bash install-singbox.sh"
+        fi
+    fi
+    
     # 如果在容器中且是 root 用户，提示可以直接配置 shell
     if [ "$IN_CONTAINER" = true ] && [ "$(id -u)" -eq 0 ]; then
         log_info "================================"
