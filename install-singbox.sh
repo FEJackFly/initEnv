@@ -77,7 +77,7 @@ setup_config() {
     
     # 检测环境并选择配置
     if is_container; then
-        log_warn "检测到容器环境，将使用 HTTP/SOCKS5 代理模式（禁用 TUN）"
+        log_warn "检测到容器/WSL 环境，将使用 HTTP/SOCKS5 代理模式（禁用 TUN）"
         
         # 生成容器环境配置（禁用 TUN）
         cat > /etc/sing-box/config.json <<'EOF'
@@ -202,8 +202,17 @@ EOF
     log_info "✓ 数据库下载完成"
 }
 
-# 检测是否在容器中
+# 检测是否在容器中或 WSL 环境
 is_container() {
+    # 检查 WSL 环境
+    if [ -f /proc/version ] && grep -qi "microsoft\|WSL" /proc/version; then
+        return 0
+    fi
+    
+    if [ -f /proc/sys/kernel/osrelease ] && grep -qi "microsoft\|WSL" /proc/sys/kernel/osrelease; then
+        return 0
+    fi
+    
     # 优先检查明确的容器标识
     [ -f /.dockerenv ] && return 0
     [ -f /run/.containerenv ] && return 0
@@ -228,7 +237,7 @@ is_container() {
 create_service() {
     # 检测容器环境
     if is_container; then
-        log_info "检测到容器环境，跳过 systemd 服务创建"
+        log_info "检测到容器/WSL 环境，跳过 systemd 服务创建"
         log_info "将创建启动脚本: /usr/local/bin/start-singbox.sh"
         
         cat > /usr/local/bin/start-singbox.sh <<'EOF'
@@ -296,7 +305,7 @@ EOF
 start_service() {
     # 容器环境直接启动
     if is_container; then
-        log_info "在容器环境中启动 sing-box..."
+        log_info "在容器/WSL 环境中启动 sing-box..."
         
         # 直接启动
         /usr/local/bin/start-singbox.sh
@@ -365,19 +374,19 @@ show_usage() {
         cat <<EOF
 
 ${GREEN}========================================${NC}
-${GREEN}  sing-box 安装完成！(容器环境)${NC}
+${GREEN}  sing-box 安装完成！(容器/WSL 环境)${NC}
 ${GREEN}========================================${NC}
 
 ✓ 配置文件: /etc/sing-box/config.json
 ✓ 日志文件: /var/log/sing-box.log
 
-✓ 服务管理（容器环境）:
+✓ 服务管理（容器/WSL 环境）:
   - 启动: start-singbox.sh
   - 停止: stop-singbox.sh
   - 查看日志: tail -f /var/log/sing-box.log
   - 检查进程: ps aux | grep sing-box
 
-${YELLOW}⚠ 容器环境使用 HTTP/SOCKS5 代理模式（TUN 已禁用）${NC}
+${YELLOW}⚠ 容器/WSL 环境使用 HTTP/SOCKS5 代理模式（TUN 已禁用）${NC}
 
 ✓ HTTP/SOCKS5 代理端口: 0.0.0.0:2080
   
@@ -391,9 +400,9 @@ ${YELLOW}⚠ 容器环境使用 HTTP/SOCKS5 代理模式（TUN 已禁用）${NC}
   - 国外网站 → 代理
   - 广告域名 → 拦截
 
-${YELLOW}容器环境提示:${NC}
+${YELLOW}容器/WSL 环境提示:${NC}
 - sing-box 已在后台运行
-- 重启容器后需要重新运行: start-singbox.sh
+- 重启容器/WSL 后需要重新运行: start-singbox.sh
 - 如需修改配置，编辑 /etc/sing-box/config.json 后重启
 
 ${GREEN}========================================${NC}
