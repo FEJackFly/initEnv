@@ -410,31 +410,43 @@ main() {
         if [ "$(id -u)" -eq 0 ]; then
             setup_ubuntu
             
-            # 在容器环境中，提供选项是否继续配置 shell
+            log_info ""
+            log_info "=========================================="
+            log_info "系统设置完成！"
+            log_info ""
+            
+            # 检查环境并给出相应提示
             if [ "$IN_CONTAINER" = true ]; then
-                log_info ""
-                log_info "=========================================="
-                log_info "系统设置完成！"
-                log_info ""
-                log_info "下一步选项："
-                log_info "1. 继续配置 Shell (为 root 用户)"
-                log_info "2. 退出并创建普通用户后再运行"
-                log_info ""
-                log_info "在容器环境中，建议直接为 root 用户配置 Shell"
-                log_info "=========================================="
-                log_info ""
-                
-                # 默认继续配置 shell
+                log_info "检测到容器环境，在容器中通常使用 root 用户"
                 log_info "正在为 root 用户配置 Shell 环境..."
-                setup_shell
-                log_info ""
-                log_info "✓ 所有配置完成！"
-                log_info "现在可以执行: source ~/.zshrc 或重新进入 shell"
             else
-                # 非容器环境，提示使用普通用户
-                log_info "Linux 系统设置完成。"
-                log_info "建议：以普通用户身份（不要使用 sudo）再次运行此脚本来完成 shell 的配置。"
+                log_info "⚠️ 检测到物理机/虚拟机环境"
+                log_info ""
+                log_info "建议："
+                log_info "  1. 创建普通用户: adduser <username>"
+                log_info "  2. 添加 sudo 权限: usermod -aG sudo <username>"
+                log_info "  3. 切换用户并运行: su - <username> && bash init.sh"
+                log_info ""
+                log_info "或者："
+                log_info "  继续为 root 用户配置（通常不推荐）"
+                log_info ""
+                log_info "正在为 root 用户配置 Shell（10秒后继续，Ctrl+C 取消）..."
+                
+                # 给用户 10 秒考虑时间
+                sleep 10 || {
+                    log_info "配置已取消。"
+                    log_info "提示：以普通用户身份运行脚本: bash init.sh"
+                    exit 0
+                }
             fi
+            
+            log_info "=========================================="
+            log_info ""
+            
+            setup_shell
+            log_info ""
+            log_info "✓ 所有配置完成！"
+            log_info "现在可以执行: source ~/.zshrc 或重新进入 shell"
         else
             # 普通用户运行，直接配置 shell
             log_info "检测到普通用户，开始配置 Shell 环境..."
