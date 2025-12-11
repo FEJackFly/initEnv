@@ -90,11 +90,11 @@ setup_config() {
         "servers": [
             {
                 "tag": "google",
-                "address": "https://8.8.8.8/dns-query"
+                "address": "8.8.8.8"
             },
             {
                 "tag": "cloudflare",
-                "address": "https://1.1.1.1/dns-query"
+                "address": "1.1.1.1"
             },
             {
                 "tag": "local",
@@ -196,10 +196,28 @@ EOF
     # 下载 GeoIP 和 GeoSite 数据库
     log_info "下载 GeoIP 和 GeoSite 数据库..."
     
-    wget -O /etc/sing-box/geoip.db https://github.com/SagerNet/sing-geoip/releases/latest/download/geoip.db
-    wget -O /etc/sing-box/geosite.db https://github.com/SagerNet/sing-geosite/releases/latest/download/geosite.db
+    # 尝试下载 geoip.db
+    if ! wget -O /etc/sing-box/geoip.db https://github.com/SagerNet/sing-geoip/releases/latest/download/geoip.db 2>/dev/null; then
+        log_warn "GitHub 下载失败，尝试镜像站点..."
+        if ! wget -O /etc/sing-box/geoip.db https://mirror.ghproxy.com/https://github.com/SagerNet/sing-geoip/releases/latest/download/geoip.db 2>/dev/null; then
+            log_error "geoip.db 下载失败，sing-box 将在首次启动时自动下载"
+        fi
+    fi
     
-    log_info "✓ 数据库下载完成"
+    # 尝试下载 geosite.db
+    if ! wget -O /etc/sing-box/geosite.db https://github.com/SagerNet/sing-geosite/releases/latest/download/geosite.db 2>/dev/null; then
+        log_warn "GitHub 下载失败，尝试镜像站点..."
+        if ! wget -O /etc/sing-box/geosite.db https://mirror.ghproxy.com/https://github.com/SagerNet/sing-geosite/releases/latest/download/geosite.db 2>/dev/null; then
+            log_error "geosite.db 下载失败，sing-box 将在首次启动时自动下载"
+        fi
+    fi
+    
+    # 检查下载结果
+    if [ -f /etc/sing-box/geoip.db ] && [ -f /etc/sing-box/geosite.db ]; then
+        log_info "✓ 数据库下载完成"
+    else
+        log_warn "⚠ 部分数据库下载失败，但不影响使用（将在运行时自动下载）"
+    fi
 }
 
 # 检测是否在容器中或 WSL 环境
