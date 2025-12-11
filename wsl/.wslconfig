@@ -1,0 +1,41 @@
+# 适用于所有运行在 WSL 2 上的 Linux 发行版的设置
+[wsl2]
+
+# 限制虚拟机最多使用 4 GB 内存，可以使用 GB 或 MB 作为单位设置整数值
+memory=4GB
+
+# 设置虚拟机使用两个虚拟处理器
+processors=2
+
+# 指定自定义 Linux 内核用于已安装的发行版。默认内核可在 https://github.com/microsoft/WSL2-Linux-Kernel 找到
+kernel=C:\\temp\\myCustomKernel
+
+# 为自定义 Linux 内核指定模块 VHD 文件，用于已安装的发行版
+kernelModules=C:\\temp\\modules.vhdx
+
+# 设置额外的内核参数，此示例启用较旧的 Linux 基础镜像（如 CentOS 6）
+kernelCommandLine = vsyscall=emulate
+
+# 设置交换空间大小为 8GB，默认是可用内存的 25%
+swap=8GB
+
+# 设置交换文件路径位置，默认是 %UserProfile%\AppData\Local\Temp\swap.vhdx
+swapfile=C:\\temp\\wsl-swap.vhdx
+
+# 启用默认连接，将 WSL 2 localhost 绑定到 Windows localhost
+# 当 networkingMode=mirrored 时，此设置会被忽略
+localhostforwarding=true
+
+# 禁用嵌套虚拟化
+nestedVirtualization=false
+
+# 打开输出控制台，在打开 WSL 2 发行版时显示 dmesg 内容，用于调试
+debugConsole=true
+
+# 设置保留的崩溃转储文件最大数量（默认为 5）
+maxCrashDumpCount=10
+
+# 启用实验性功能
+[experimental]
+# 启用稀疏 VHD（虚拟硬盘），可以自动回收未使用的空间
+sparseVhd=true
