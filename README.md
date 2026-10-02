@@ -1,8 +1,8 @@
 <!--
  * @Author: luofei 501177081@qq.com
  * @Date: 2023-12-18 16:29:20
- * @LastEditors: error: error: git config user.name & please set dead value or install git && error: git config user.email & please set dead value or install git & please set dead value or install git
- * @LastEditTime: 2025-09-24 16:25:00
+ * @LastEditors: jack 501177081@qq.com
+ * @LastEditTime: 2026-10-02 11:52:15
  * @FilePath: /initEnv/README.md
  * @Description:
  *
